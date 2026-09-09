@@ -62,6 +62,11 @@ function mergeBooking(session, extracted) {
   }
 }
 
+function hasBookingData(booking) {
+  return ['source', 'destination', 'date', 'num_tickets', 'time_preference', 'travel_class']
+    .some((field) => booking[field] !== undefined && booking[field] !== null && booking[field] !== '');
+}
+
 function validateBooking(booking) {
   if (!booking.source) return { field: 'source', text: 'Which city are you travelling from?' };
   const source = isSupportedCity(booking.source);
@@ -190,6 +195,17 @@ router.post('/', async (req, res) => {
       let llmResult = {};
       try { llmResult = await callLLM(session.conversationHistory); } catch (error) { console.warn('LLM extraction unavailable; using local extraction:', error.message); }
       const extracted = { ...pickBooking(llmResult), ...localExtraction(message) };
+      const isGreetingOrGeneralMessage = llmResult.intent === 'other'
+        && !hasBookingData(extracted)
+        && !session.awaitingField
+        && !session.availabilityCheck;
+
+      // Do not force greetings and unrelated messages into the booking form.
+      // A pending field still takes priority, so a reply such as "Chennai"
+      // continues the current booking as expected.
+      if (isGreetingOrGeneralMessage) {
+        data = response('text', llmResult.reply || 'Hi! How can I help you book a train today?');
+      } else {
       // A short answer to a one-at-a-time prompt is contextual data, not a new intent.
       if (session.awaitingField && extracted[session.awaitingField] === undefined) {
         if (session.awaitingField === 'num_tickets' && /^-?\d+$/.test(message.trim())) extracted.num_tickets = Number(message.trim());
@@ -223,6 +239,7 @@ router.post('/', async (req, res) => {
         const issue = validateBooking(session.booking);
         session.awaitingField = issue?.field || null;
         data = issue ? response('text', issue.text) : optionsResponse(session);
+      }
       }
     }
 
