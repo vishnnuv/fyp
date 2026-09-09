@@ -1,0 +1,16 @@
+# Dependencies and generated builds
+node_modules/
+client/node_modules/
+server/node_modules/
+client/dist/
+
+# Local configuration and runtime data
+.env
+server/.env
+*.log
+server/db_files/*.sqlite
+
+# System/editor files
+.DS_Store
+Thumbs.db
+.vscode/

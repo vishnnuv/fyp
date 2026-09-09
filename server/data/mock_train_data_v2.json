@@ -1,0 +1,219 @@
+[
+  {
+    "train_number": "20607",
+    "train_name": "MGR Chennai Mysuru Vande Bharat Express",
+    "source": "Chennai",
+    "destination": "Bangalore",
+    "departure_time": "05:50",
+    "arrival_time": "10:00",
+    "duration": "4h 10m",
+    "days_of_run": ["Sun", "Mon", "Tue", "Thu", "Fri", "Sat"],
+    "classes": [
+      { "type": "Chair Car", "fare": 840, "seats_available": 42 },
+      { "type": "Executive Chair Car", "fare": 1680, "seats_available": 14 }
+    ]
+  },
+  {
+    "train_number": "12007",
+    "train_name": "MGR Chennai Mysuru Shatabdi Express",
+    "source": "Chennai",
+    "destination": "Bangalore",
+    "departure_time": "06:00",
+    "arrival_time": "11:05",
+    "duration": "5h 05m",
+    "days_of_run": ["Sun", "Mon", "Tue", "Thu", "Fri", "Sat"],
+    "classes": [
+      { "type": "Chair Car", "fare": 580, "seats_available": 58 },
+      { "type": "Executive Chair Car", "fare": 1050, "seats_available": 20 }
+    ]
+  },
+  {
+    "train_number": "12609",
+    "train_name": "Mysuru Express",
+    "source": "Chennai",
+    "destination": "Bangalore",
+    "departure_time": "21:30",
+    "arrival_time": "03:40",
+    "duration": "6h 10m",
+    "days_of_run": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "classes": [
+      { "type": "AC", "fare": 875, "seats_available": 28 },
+      { "type": "Sleeper", "fare": 325, "seats_available": 70 },
+      { "type": "General", "fare": 140, "seats_available": 150 }
+    ]
+  },
+  {
+    "train_number": "16021",
+    "train_name": "Kaveri Express",
+    "source": "Chennai",
+    "destination": "Bangalore",
+    "departure_time": "21:15",
+    "arrival_time": "03:49",
+    "duration": "6h 34m",
+    "days_of_run": ["Fri"],
+    "classes": [
+      { "type": "AC", "fare": 870, "seats_available": 16 },
+      { "type": "Sleeper", "fare": 330, "seats_available": 52 },
+      { "type": "General", "fare": 140, "seats_available": 0 }
+    ]
+  },
+  {
+    "train_number": "12292",
+    "train_name": "MAS YPR SF Express",
+    "source": "Chennai",
+    "destination": "Bangalore",
+    "departure_time": "23:30",
+    "arrival_time": "04:53",
+    "duration": "5h 23m",
+    "days_of_run": ["Sat"],
+    "classes": [
+      { "type": "AC", "fare": 890, "seats_available": 22 },
+      { "type": "Sleeper", "fare": 340, "seats_available": 48 }
+    ]
+  },
+  {
+    "train_number": "20608",
+    "train_name": "MAS Vande Bharat Express",
+    "source": "Bangalore",
+    "destination": "Chennai",
+    "departure_time": "14:50",
+    "arrival_time": "19:20",
+    "duration": "4h 30m",
+    "days_of_run": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "classes": [
+      { "type": "Chair Car", "fare": 840, "seats_available": 36 },
+      { "type": "Executive Chair Car", "fare": 1680, "seats_available": 10 }
+    ]
+  },
+  {
+    "train_number": "12296",
+    "train_name": "Sanghamitra Express",
+    "source": "Bangalore",
+    "destination": "Chennai",
+    "departure_time": "17:15",
+    "arrival_time": "22:35",
+    "duration": "5h 20m",
+    "days_of_run": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "classes": [
+      { "type": "AC", "fare": 900, "seats_available": 24 },
+      { "type": "Sleeper", "fare": 345, "seats_available": 60 },
+      { "type": "General", "fare": 145, "seats_available": 90 }
+    ]
+  },
+  {
+    "train_number": "12027",
+    "train_name": "MAS SBC Shatabdi Express",
+    "source": "Bangalore",
+    "destination": "Chennai",
+    "departure_time": "16:25",
+    "arrival_time": "21:20",
+    "duration": "4h 55m",
+    "days_of_run": ["Sun", "Mon", "Tue", "Thu", "Fri", "Sat"],
+    "classes": [
+      { "type": "Chair Car", "fare": 620, "seats_available": 50 },
+      { "type": "Executive Chair Car", "fare": 1120, "seats_available": 12 }
+    ]
+  },
+  {
+    "train_number": "16609",
+    "train_name": "Alappuzha Express",
+    "source": "Coimbatore",
+    "destination": "Chennai",
+    "departure_time": "20:15",
+    "arrival_time": "05:40",
+    "duration": "9h 25m",
+    "days_of_run": ["Mon", "Wed", "Fri", "Sun"],
+    "classes": [
+      { "type": "AC", "fare": 1120, "seats_available": 30 },
+      { "type": "Sleeper", "fare": 410, "seats_available": 78 },
+      { "type": "General", "fare": 160, "seats_available": 95 }
+    ]
+  },
+  {
+    "train_number": "12675",
+    "train_name": "Kovai Express",
+    "source": "Coimbatore",
+    "destination": "Chennai",
+    "departure_time": "14:20",
+    "arrival_time": "21:15",
+    "duration": "6h 55m",
+    "days_of_run": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "classes": [
+      { "type": "AC", "fare": 980, "seats_available": 12 },
+      { "type": "Sleeper", "fare": 370, "seats_available": 54 },
+      { "type": "General", "fare": 140, "seats_available": 130 }
+    ]
+  },
+  {
+    "train_number": "12676",
+    "train_name": "Kovai Express",
+    "source": "Chennai",
+    "destination": "Coimbatore",
+    "departure_time": "06:00",
+    "arrival_time": "13:15",
+    "duration": "7h 15m",
+    "days_of_run": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "classes": [
+      { "type": "AC", "fare": 980, "seats_available": 8 },
+      { "type": "Sleeper", "fare": 370, "seats_available": 46 },
+      { "type": "General", "fare": 140, "seats_available": 120 }
+    ]
+  },
+  {
+    "train_number": "22625",
+    "train_name": "MGR Chennai KSR Bengaluru AC Double Decker Express",
+    "source": "Chennai",
+    "destination": "Bangalore",
+    "departure_time": "15:15",
+    "arrival_time": "20:25",
+    "duration": "5h 10m",
+    "days_of_run": ["Mon", "Wed", "Fri"],
+    "classes": [
+      { "type": "AC Chair Car", "fare": 990, "seats_available": 40 }
+    ]
+  },
+  {
+    "train_number": "22497",
+    "train_name": "Chennai Central Mumbai CST Express",
+    "source": "Chennai",
+    "destination": "Mumbai",
+    "departure_time": "23:45",
+    "arrival_time": "22:30",
+    "duration": "22h 45m",
+    "days_of_run": ["Tue", "Fri", "Sun"],
+    "classes": [
+      { "type": "AC", "fare": 2150, "seats_available": 20 },
+      { "type": "Sleeper", "fare": 780, "seats_available": 48 },
+      { "type": "General", "fare": 290, "seats_available": 60 }
+    ]
+  },
+  {
+    "train_number": "11028",
+    "train_name": "Mumbai Chennai Mail",
+    "source": "Mumbai",
+    "destination": "Chennai",
+    "departure_time": "21:15",
+    "arrival_time": "20:05",
+    "duration": "22h 50m",
+    "days_of_run": ["Mon", "Wed", "Sat"],
+    "classes": [
+      { "type": "AC", "fare": 2080, "seats_available": 15 },
+      { "type": "Sleeper", "fare": 760, "seats_available": 40 },
+      { "type": "General", "fare": 280, "seats_available": 70 }
+    ]
+  },
+  {
+    "train_number": "12079",
+    "train_name": "Jan Shatabdi Express",
+    "source": "Bangalore",
+    "destination": "Coimbatore",
+    "departure_time": "05:40",
+    "arrival_time": "11:20",
+    "duration": "5h 40m",
+    "days_of_run": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "classes": [
+      { "type": "AC Chair Car", "fare": 690, "seats_available": 22 },
+      { "type": "General", "fare": 145, "seats_available": 100 }
+    ]
+  }
+]
