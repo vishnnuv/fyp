@@ -36,6 +36,7 @@ async function initDb() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       pnr TEXT UNIQUE NOT NULL,
       session_id TEXT NOT NULL,
+      customer_id TEXT,
       train_number TEXT NOT NULL,
       train_name TEXT NOT NULL,
       source TEXT NOT NULL,
@@ -51,6 +52,14 @@ async function initDb() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  // Keep existing local bookings when upgrading the demo database.
+  const tableInfo = db.exec('PRAGMA table_info(bookings)');
+  const columns = tableInfo[0]?.values.map((row) => row[1]) || [];
+  if (!columns.includes('customer_id')) {
+    db.run('ALTER TABLE bookings ADD COLUMN customer_id TEXT');
+  }
+  db.run('UPDATE bookings SET customer_id = session_id WHERE customer_id IS NULL');
 
   saveDbToDisk();
   return db;

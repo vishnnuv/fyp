@@ -20,10 +20,14 @@ export default function App() {
     window.location.reload();
   }, []);
 
+  const handleShowBookings = useCallback(() => {
+    handleSend('Show my bookings');
+  }, [handleSend]);
+
   return (
     <div className="app-layout">
       {/* Left Sidebar */}
-      <Sidebar onNewChat={handleNewChat} />
+      <Sidebar onNewChat={handleNewChat} onShowBookings={handleShowBookings} />
 
       {/* Main Chat Area */}
       <main className="chat-main">

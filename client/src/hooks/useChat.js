@@ -2,6 +2,18 @@ import { useState, useCallback } from 'react';
 
 // Generate a stable session ID per browser session
 const SESSION_ID = `session_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+const CUSTOMER_ID_KEY = 'railbot_customer_id';
+
+function getCustomerId() {
+  let customerId = window.localStorage.getItem(CUSTOMER_ID_KEY);
+  if (!customerId) {
+    customerId = `guest_${window.crypto?.randomUUID?.() || `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`}`;
+    window.localStorage.setItem(CUSTOMER_ID_KEY, customerId);
+  }
+  return customerId;
+}
+
+const CUSTOMER_ID = getCustomerId();
 
 export function useChat() {
   const [messages, setMessages] = useState([]);
@@ -22,7 +34,7 @@ export function useChat() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text.trim(), sessionId: SESSION_ID }),
+        body: JSON.stringify({ message: text.trim(), sessionId: SESSION_ID, customerId: CUSTOMER_ID }),
       });
 
       if (!response.ok) {
@@ -42,6 +54,13 @@ export function useChat() {
           booking: data.booking,
           numTickets: data.numTickets,
           onSelectTrain,
+        });
+      } else if (data.type === 'booking_list') {
+        addMessage({
+          role: 'bot',
+          type: 'booking_list',
+          text: data.text,
+          bookings: data.bookings,
         });
       } else if (data.type === 'booking_confirmed') {
         addMessage({
@@ -87,5 +106,5 @@ export function useChat() {
     await sendMessage(`I'll take option ${index + 1}${classText}`, undefined);
   }, [sendMessage]);
 
-  return { messages, isLoading, sendMessage, handleSelectTrain: handleTrainAndClassSelection, sessionId: SESSION_ID };
+  return { messages, isLoading, sendMessage, handleSelectTrain: handleTrainAndClassSelection, sessionId: SESSION_ID, customerId: CUSTOMER_ID };
 }

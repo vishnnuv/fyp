@@ -1,5 +1,6 @@
 import TrainCard from './TrainCard';
 import ConfirmCard from './ConfirmCard';
+import BookingList from './BookingList';
 
 // Simple markdown-like text renderer
 function BotText({ text }) {
@@ -78,6 +79,10 @@ export default function MessageBubble({ message, onSelectTrain }) {
                 totalFare={message.totalFare}
                 travelDate={message.travelDate}
               />
+            )}
+
+            {message.type === 'booking_list' && message.bookings && (
+              <BookingList bookings={message.bookings} />
             )}
           </div>
           <span className="message-time">

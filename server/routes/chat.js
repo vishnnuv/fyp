@@ -4,7 +4,7 @@ const { callLLM } = require('../services/llm');
 const {
   searchTrains, isSupportedCity, parseTravelDate, routeExists, SUPPORTED_CITIES,
 } = require('../services/trainSearch');
-const { saveBooking } = require('../services/bookingStore');
+const { saveBooking, getBookingsByCustomer, getBookingByPNRForCustomer, cancelBooking } = require('../services/bookingStore');
 
 // State is deliberately server-owned. In particular, trainOptions is the exact
 // whitelist from which a later selection is allowed to resolve.
@@ -15,7 +15,8 @@ function getSession(sessionId) {
   if (!sessions.has(sessionId)) {
     sessions.set(sessionId, {
       conversationHistory: [], booking: {}, trainOptions: [],
-      awaitingSelection: false, awaitingConfirmation: null, availabilityCheck: false, awaitingField: null,
+      awaitingSelection: false, awaitingConfirmation: null, awaitingCancellation: null,
+      availabilityCheck: false, awaitingField: null,
     });
   }
   return sessions.get(sessionId);
@@ -30,6 +31,7 @@ function stateLog(sessionId, session) {
   console.log(`[RailBot state] ${sessionId}`, JSON.stringify({
     booking: session.booking, optionNumbers: session.trainOptions.map((item) => item.train.train_number),
     awaitingSelection: session.awaitingSelection, awaitingConfirmation: Boolean(session.awaitingConfirmation),
+    awaitingCancellation: Boolean(session.awaitingCancellation),
     awaitingField: session.awaitingField,
   }));
 }
@@ -150,22 +152,114 @@ function listOptions(session) {
 function isYes(message) { return /\b(yes|yeah|yep|confirm|proceed|book it|go ahead)\b/i.test(message); }
 function isNo(message) { return /\b(no|nope|cancel|don't|do not|change|other options|another)\b/i.test(message); }
 function wantsAvailability(message) { return /\b(is there|are there|availability|available)\b/i.test(message) && !/\bbook(?:ing)?\b/i.test(message); }
+function extractPNR(message) { return message.match(/\bPNR\d{7}\b/i)?.[0]?.toUpperCase() || null; }
+function wantsCancellation(message) { return /\b(cancel|cancellation)\b/i.test(message); }
+function wantsBookingLookup(message) { return /\b(my bookings?|show (?:my )?bookings?|list (?:my )?bookings?|check (?:my )?pnr|booking status|status.*pnr)\b/i.test(message); }
+function wantsDraftCancellation(message) { return /\b(cancel|stop|abort)\b/i.test(message); }
+function extractBookingChange(message, awaitingField) {
+  const rules = [
+    ['source', /\b(?:change|update|modify)\s+(?:the\s+)?(?:source|from)\s+(?:to\s+)?(.+)$/i],
+    ['destination', /\b(?:change|update|modify)\s+(?:the\s+)?(?:destination|to)\s+(?:to\s+)?(.+)$/i],
+    ['date', /\b(?:change|update|modify)\s+(?:the\s+)?date\s+(?:to\s+)?(.+)$/i],
+    ['num_tickets', /\b(?:change|update|modify)\s+(?:the\s+)?(?:tickets?|passengers?|count)\s+(?:to\s+)?(-?\d+)\b/i],
+    ['travel_class', /\b(?:change|update|modify)\s+(?:the\s+)?class\s+(?:to\s+)?(.+)$/i],
+    ['time_preference', /\b(?:change|update|modify)\s+(?:the\s+)?(?:time|time preference)\s+(?:to\s+)?(.+)$/i],
+  ];
+  for (const [field, pattern] of rules) {
+    const match = message.match(pattern);
+    if (match) return { field, value: field === 'num_tickets' ? Number(match[1]) : match[1].trim() };
+  }
+  if (awaitingField) {
+    const match = message.match(/\b(?:change|update|modify)\s+(?:it|that)\s+(?:to\s+)?(.+)$/i);
+    if (match) return { field: awaitingField, value: awaitingField === 'num_tickets' ? Number(match[1]) : match[1].trim() };
+  }
+  return null;
+}
+function formatBooking(booking) {
+  return `**${booking.pnr}** — ${booking.train_name} (${booking.train_number})\n${booking.source} → ${booking.destination} on ${booking.travel_date}, ${booking.departure_time}\n${booking.travel_class}, ${booking.num_tickets} ticket(s), ₹${booking.total_fare} — **${booking.status}**`;
+}
 
 router.post('/', async (req, res) => {
   try {
-    const { message, sessionId } = req.body;
+    const { message, sessionId, customerId } = req.body;
     if (!message || !sessionId) return res.status(400).json({ error: 'message and sessionId are required' });
     const session = getSession(sessionId);
+    // customerId stays the same across refreshes; sessionId only identifies
+    // the current conversation. Older clients fall back to sessionId.
+    const bookingCustomerId = customerId || sessionId;
     session.conversationHistory.push({ role: 'user', content: message });
     let data;
+    const pnr = extractPNR(message);
+    const hasDraft = session.awaitingConfirmation || session.awaitingSelection || session.awaitingField || hasBookingData(session.booking);
+    const requestedChange = extractBookingChange(message, session.awaitingField);
+
+    // Draft controls take precedence over stored-booking commands. They never
+    // modify a persisted booking until the user explicitly confirms it.
+    if (session.awaitingCancellation) {
+      const pendingCancellation = session.awaitingCancellation;
+      if (isYes(message)) {
+        const cancellation = cancelBooking(pendingCancellation.pnr, bookingCustomerId);
+        session.awaitingCancellation = null;
+        data = response('text', cancellation
+          ? `Your booking has been cancelled.\n\n${formatBooking(cancellation.booking)}`
+          : `I could not find ${pendingCancellation.pnr} anymore.`);
+      } else if (isNo(message)) {
+        session.awaitingCancellation = null;
+        data = response('text', `Okay, ${pendingCancellation.pnr} remains confirmed.`);
+      } else {
+        data = response('text', `Please reply yes to cancel ${pendingCancellation.pnr}, or no to keep it.`);
+      }
+    } else if (hasDraft && !pnr && wantsDraftCancellation(message)) {
+      session.booking = {}; session.trainOptions = []; session.awaitingSelection = false;
+      session.awaitingConfirmation = null; session.awaitingField = null; session.availabilityCheck = false;
+      data = response('text', 'Your current booking process has been cancelled. No ticket was created.');
+    } else if (hasDraft && requestedChange) {
+      session.booking[requestedChange.field] = requestedChange.value;
+      session.trainOptions = []; session.awaitingSelection = false; session.awaitingConfirmation = null;
+      const issue = validateBooking(session.booking);
+      session.awaitingField = issue?.field || null;
+      data = issue ? response('text', issue.text) : optionsResponse(session);
+    }
+
+    // Booking records are tied to the current customer profile. These commands
+    // bypass the LLM so lookup/cancellation remains reliable and cannot act
+    // on an invented PNR.
+    else if (!session.awaitingConfirmation && !session.awaitingSelection && wantsCancellation(message)) {
+      if (!pnr) {
+        data = response('text', 'Please provide the PNR you want to cancel, for example: “Cancel PNR1234567”.');
+      } else {
+        const booking = getBookingByPNRForCustomer(pnr, bookingCustomerId);
+        if (!booking) data = response('text', `I could not find ${pnr} in your saved bookings.`);
+        else if (booking.status === 'CANCELLED') data = response('text', `${pnr} is already cancelled.`);
+        else {
+          session.awaitingCancellation = { pnr };
+          data = response('text', `Are you sure you want to cancel this booking?\n\n${formatBooking(booking)}\n\nReply yes to cancel or no to keep it.`);
+        }
+      }
+    } else if (!session.awaitingConfirmation && !session.awaitingSelection && (wantsBookingLookup(message) || pnr)) {
+      if (pnr) {
+        const booking = getBookingByPNRForCustomer(pnr, bookingCustomerId);
+        data = booking
+          ? response('text', `Here is your booking:\n\n${formatBooking(booking)}`)
+          : response('text', `I could not find ${pnr} in this chat session.`);
+      } else {
+        const bookings = getBookingsByCustomer(bookingCustomerId);
+        data = bookings.length
+          ? response('booking_list', 'Here are your saved bookings:', { bookings })
+          : response('text', 'You do not have any saved bookings yet.');
+      }
+    }
 
     // These two states have precedence: user input must be resolved against state,
     // never against a model-proposed train.
-    if (session.awaitingConfirmation) {
+    else if (session.awaitingConfirmation) {
       if (isYes(message)) {
         const { train, booking, selectedClass } = session.awaitingConfirmation;
-        const { pnr, totalFare } = saveBooking({ sessionId, trainNumber: train.train_number, trainName: train.train_name, source: booking.source, destination: booking.destination, travelDate: displayDate(booking.date), departureTime: train.departure_time, arrivalTime: train.arrival_time, travelClass: selectedClass.type, farePerTicket: selectedClass.fare, numTickets: booking.num_tickets });
-        session.awaitingConfirmation = null; session.trainOptions = [];
+        const { pnr, totalFare } = saveBooking({ sessionId, customerId: bookingCustomerId, trainNumber: train.train_number, trainName: train.train_name, source: booking.source, destination: booking.destination, travelDate: displayDate(booking.date), departureTime: train.departure_time, arrivalTime: train.arrival_time, travelClass: selectedClass.type, farePerTicket: selectedClass.fare, numTickets: booking.num_tickets });
+        // The confirmed booking is persisted. Clear the in-progress draft so a
+        // later "I want to book" message starts a fresh trip, not the old one.
+        session.awaitingConfirmation = null; session.awaitingSelection = false;
+        session.trainOptions = []; session.booking = {}; session.awaitingField = null;
         data = response('booking_confirmed', `🎉 Booking confirmed! Your PNR is **${pnr}**.`, { pnr, train, booking, selectedClass, numTickets: booking.num_tickets, totalFare, travelDate: displayDate(booking.date) });
       } else if (isNo(message)) {
         session.awaitingConfirmation = null;

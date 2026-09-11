@@ -1,10 +1,4 @@
-export default function Sidebar({ onNewChat }) {
-  const pastChats = [
-    { id: 1, title: 'Chennai → Bangalore booking', active: true },
-    { id: 2, title: 'Mumbai trip planning' },
-    { id: 3, title: 'Coimbatore Express query' },
-  ];
-
+export default function Sidebar({ onNewChat, onShowBookings }) {
   return (
     <aside className="sidebar" role="complementary" aria-label="Conversation history">
       {/* Logo / Header */}
@@ -27,22 +21,19 @@ export default function Sidebar({ onNewChat }) {
         New Chat
       </button>
 
-      {/* Recent Conversations */}
-      <p className="sidebar-section-label">Recent</p>
-      {pastChats.map((chat) => (
-        <div
-          key={chat.id}
-          className={`sidebar-chat-item ${chat.active ? 'active' : ''}`}
-          role="button"
-          tabIndex={0}
-          aria-label={`Open conversation: ${chat.title}`}
-        >
-          <svg className="sidebar-chat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          {chat.title}
-        </div>
-      ))}
+      <button
+        className="sidebar-bookings"
+        onClick={onShowBookings}
+        aria-label="Show my bookings"
+        id="show-bookings-btn"
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M6 3h12v18H6z" />
+          <path d="M9 7h6M9 11h6M9 15h4" />
+        </svg>
+        My Bookings
+      </button>
+
     </aside>
   );
 }

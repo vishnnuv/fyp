@@ -148,6 +148,30 @@ body {
   color: var(--color-accent);
 }
 
+.sidebar-bookings {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  text-align: left;
+  width: 100%;
+  font-family: var(--font-family);
+}
+
+.sidebar-bookings:hover {
+  background: var(--color-accent-light);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
 .sidebar-section-label {
   font-size: 11px;
   font-weight: 600;
@@ -839,6 +863,91 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* Saved-booking cards */
+.booking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.booking-list-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.booking-list-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+
+.booking-list-label {
+  display: block;
+  font-size: 10px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.booking-list-pnr {
+  color: var(--color-accent);
+  font-size: 14px;
+}
+
+.booking-status {
+  background: #dcfce7;
+  color: #166534;
+  border-radius: var(--radius-full);
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.booking-status.cancelled {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.booking-list-train {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--color-text-primary);
+}
+
+.booking-list-train span {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.booking-list-route {
+  margin-top: 5px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.booking-list-route span {
+  color: var(--color-accent);
+  padding: 0 3px;
+}
+
+.booking-list-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--color-border-light);
+  font-size: 11px;
+  color: var(--color-text-muted);
 }
 
 /* ─── Input Bar ──────────────────────────────────────────────── */
