@@ -78,6 +78,8 @@ export default function MessageBubble({ message, onSelectTrain }) {
                 numTickets={message.numTickets}
                 totalFare={message.totalFare}
                 travelDate={message.travelDate}
+                paymentId={message.paymentId}
+                paymentMethod={message.paymentMethod}
               />
             )}
 

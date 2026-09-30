@@ -1,4 +1,4 @@
-export default function ConfirmCard({ pnr, train, booking, selectedClass, numTickets, totalFare, travelDate }) {
+export default function ConfirmCard({ pnr, train, booking, selectedClass, numTickets, totalFare, travelDate, paymentId, paymentMethod }) {
   return (
     <div className="confirm-card" role="region" aria-label="Booking confirmation" id="booking-confirmation">
       {/* Header */}
@@ -62,10 +62,13 @@ export default function ConfirmCard({ pnr, train, booking, selectedClass, numTic
         <span className="confirm-total-amount">₹{totalFare.toLocaleString('en-IN')}</span>
       </div>
 
-      {/* Mock payment banner */}
+      {/* Payment status — captured through Razorpay test mode */}
       <div className="confirm-mock-payment" aria-label="Payment status">
         <span>💳</span>
-        <span>Payment Successful (Demo Mode)</span>
+        <span>
+          Payment Successful — {paymentMethod ? `${paymentMethod.toUpperCase()} · ` : ''}Razorpay (Test Mode)
+        </span>
+        {paymentId && <span className="confirm-payment-id">{paymentId}</span>}
       </div>
     </div>
   );

@@ -863,6 +863,16 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
+}
+
+.confirm-payment-id {
+  margin-left: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: #065f46;
+  opacity: 0.8;
+  word-break: break-all;
 }
 
 /* Saved-booking cards */

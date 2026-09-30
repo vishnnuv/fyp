@@ -10,6 +10,7 @@ An AI-powered Indian Railway ticket booking chatbot with a ChatGPT-style convers
 | Backend | Node.js + Express |
 | Database | sql.js (pure-JS SQLite, no build tools needed) |
 | NLP/AI | Groq API (llama-3.3-70b-versatile) |
+| Payments | Razorpay Checkout (test mode) |
 | Styling | Vanilla CSS (ChatGPT-inspired design) |
 
 ---
@@ -45,7 +46,15 @@ The Groq API key is already set in `server/.env`. If you need to update it:
 GROQ_API_KEY=your-groq-api-key-here
 PORT=3001
 NODE_ENV=development
+
+# Razorpay TEST mode keys (Razorpay dashboard -> Settings -> API Keys)
+RAZORPAY_KEY_ID=rzp_test_xxxxxxxx
+RAZORPAY_KEY_SECRET=your-razorpay-secret
 ```
+
+> Payments run in **Razorpay test mode** — no real money moves. Use Razorpay's
+> [test cards](https://razorpay.com/docs/payments/payments/test-card-details/)
+> inside the checkout (e.g. `4111 1111 1111 1111`, any future expiry, any CVV).
 
 ### 4. Run the App
 
@@ -69,9 +78,15 @@ Open your browser to http://localhost:5173
 1. Type: "Book a ticket from Chennai to Bangalore on Monday"
 2. Bot will ask for the number of tickets if missing
 3. Bot shows 2-4 matching trains with fares
-4. Click "Select" on a train card, or type "I'll take the second one"
+4. Click "Select" on a train card (pick a class first), or type "I'll take the second one"
 5. Bot asks for confirmation -> type "Yes, confirm it"
-6. Booking confirmed with PNR number!
+6. A **Razorpay checkout** opens in test mode -> pay with a test card
+7. The signature is verified on the server -> booking confirmed with PNR number!
+
+If the checkout is closed or the payment fails, the chat keeps the payment
+pending: reply **"retry payment"** to open it again (same order) or
+**"cancel payment"** to abandon it. A ticket is only created after a verified
+payment.
 
 ### Multi-Booking Test Scenario (Key Feature)
 
@@ -131,11 +146,12 @@ fyp/
     +-- db/
     |   +-- init.js           (sql.js SQLite init)
     +-- routes/
-    |   +-- chat.js           (POST /api/chat handler)
+    |   +-- chat.js           (POST /api/chat handler + payment endpoints)
     +-- services/
         +-- llm.js            (Groq API + system prompt)
         +-- trainSearch.js    (Filter trains by route/day)
         +-- bookingStore.js   (PNR generation + SQLite writes)
+        +-- payment.js        (Razorpay orders + signature verification)
 ```
 
 ---
@@ -153,7 +169,26 @@ fyp/
 Response types:
 - text -- plain conversational reply
 - train_options -- array of matching trains
-- booking_confirmed -- PNR + full booking details
+- payment_required -- Razorpay order details; the client opens checkout, then confirms via /payment/verify
+- booking_confirmed -- PNR + full booking details (only after a verified payment)
+
+### POST /api/chat/payment/verify
+Called by the client after Razorpay checkout succeeds:
+
+```json
+{
+  "sessionId": "session_1234567890_abc123",
+  "customerId": "guest_uuid",
+  "razorpay_order_id": "order_xxx",
+  "razorpay_payment_id": "pay_xxx",
+  "razorpay_signature": "hmac_sha256_signature",
+  "method": "upi"
+}
+```
+
+The server recomputes `HMAC_SHA256(order_id|payment_id, RAZORPAY_KEY_SECRET)`
+and only writes the booking (with PNR) if it matches. `200` returns a normal
+`booking_confirmed` payload; anything else means no ticket was created.
 
 ### GET /api/chat/bookings/:sessionId
 Returns all bookings made in a session.
@@ -169,6 +204,11 @@ Health check endpoint.
 - Conversation history is sent to the LLM on every message for context continuity
 - No regex parsing -- all entity extraction is done by the LLM via structured JSON output
 - Multi-booking: LLM returns a bookings[] array; server processes them sequentially
+- Payment flow: "yes" -> Razorpay order created (`session.pendingPayment`) -> checkout on
+  the client -> signature verified server-side -> booking row + PNR written. The booking
+  is never persisted before payment verification, and a replayed payload is rejected
+  because the pending payment is cleared on success.
+- Bookings store `razorpay_order_id`, `razorpay_payment_id` and `payment_method` for audit.
 - SQLite bookings persist across server restarts (saved to server/db_files/bookings.sqlite)
 
 ---

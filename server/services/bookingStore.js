@@ -18,6 +18,9 @@ function saveBooking({
   travelClass,
   farePerTicket,
   numTickets,
+  razorpayOrderId = null,
+  razorpayPaymentId = null,
+  paymentMethod = null,
 }) {
   const db = getDb();
   const pnr = generatePNR();
@@ -27,11 +30,13 @@ function saveBooking({
     `INSERT INTO bookings 
       (pnr, session_id, customer_id, train_number, train_name, source, destination, 
        travel_date, departure_time, arrival_time, travel_class, 
-       fare_per_ticket, num_tickets, total_fare)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       fare_per_ticket, num_tickets, total_fare,
+       razorpay_order_id, razorpay_payment_id, payment_method)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [pnr, sessionId, customerId, trainNumber, trainName, source, destination,
      travelDate, departureTime, arrivalTime, travelClass,
-     farePerTicket, numTickets, totalFare]
+     farePerTicket, numTickets, totalFare,
+     razorpayOrderId, razorpayPaymentId, paymentMethod]
   );
 
   // Persist to disk after each write

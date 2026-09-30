@@ -5,6 +5,7 @@ const {
   searchTrains, isSupportedCity, parseTravelDate, routeExists, SUPPORTED_CITIES,
 } = require('../services/trainSearch');
 const { saveBooking, getBookingsByCustomer, getBookingByPNRForCustomer, cancelBooking } = require('../services/bookingStore');
+const { createOrder, verifyPaymentSignature } = require('../services/payment');
 
 // State is deliberately server-owned. In particular, trainOptions is the exact
 // whitelist from which a later selection is allowed to resolve.
@@ -16,7 +17,7 @@ function getSession(sessionId) {
     sessions.set(sessionId, {
       conversationHistory: [], booking: {}, trainOptions: [],
       awaitingSelection: false, awaitingConfirmation: null, awaitingCancellation: null,
-      availabilityCheck: false, awaitingField: null,
+      awaitingField: null, availabilityCheck: false, pendingPayment: null,
     });
   }
   return sessions.get(sessionId);
@@ -32,6 +33,7 @@ function stateLog(sessionId, session) {
     booking: session.booking, optionNumbers: session.trainOptions.map((item) => item.train.train_number),
     awaitingSelection: session.awaitingSelection, awaitingConfirmation: Boolean(session.awaitingConfirmation),
     awaitingCancellation: Boolean(session.awaitingCancellation),
+    pendingPayment: session.pendingPayment ? session.pendingPayment.orderId : null,
     awaitingField: session.awaitingField,
   }));
 }
@@ -179,6 +181,47 @@ function formatBooking(booking) {
   return `**${booking.pnr}** — ${booking.train_name} (${booking.train_number})\n${booking.source} → ${booking.destination} on ${booking.travel_date}, ${booking.departure_time}\n${booking.travel_class}, ${booking.num_tickets} ticket(s), ₹${booking.total_fare} — **${booking.status}**`;
 }
 
+// --- Razorpay payment -------------------------------------------------------
+// Confirming a booking creates a Razorpay order first; the ticket is only
+// persisted after the client returns a payment signature we can verify.
+
+function pendingPaymentResponse(pending) {
+  return response('payment_required',
+    `Opening **Razorpay checkout** for **₹${pending.totalFare}** (test mode) — ${pending.train.train_name}, ${pending.travelDate}. Your ticket is issued only after the payment succeeds.`,
+    {
+      keyId: process.env.RAZORPAY_KEY_ID,
+      orderId: pending.orderId,
+      amount: pending.totalFare * 100,
+      currency: 'INR',
+      trainName: pending.train.train_name,
+      source: pending.booking.source,
+      destination: pending.booking.destination,
+      travelDate: pending.travelDate,
+      numTickets: pending.booking.num_tickets,
+      totalFare: pending.totalFare,
+    });
+}
+
+async function ensurePaymentOrder(sessionId, session) {
+  const pending = session.pendingPayment;
+  if (pending.orderId) return pending.orderId;
+  const order = await createOrder({
+    amountPaise: pending.totalFare * 100,
+    receipt: `railbot_${sessionId}`.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 40),
+    notes: {
+      sessionId,
+      route: `${pending.booking.source}-${pending.booking.destination}`,
+      travelDate: String(pending.booking.date),
+    },
+  });
+  pending.orderId = order.id;
+  return order.id;
+}
+
+function confirmationFrom(pending) {
+  return { train: pending.train, booking: pending.booking, selectedClass: pending.selectedClass };
+}
+
 router.post('/', async (req, res) => {
   try {
     const { message, sessionId, customerId } = req.body;
@@ -209,7 +252,33 @@ router.post('/', async (req, res) => {
       } else {
         data = response('text', `Please reply yes to cancel ${pendingCancellation.pnr}, or no to keep it.`);
       }
-    } else if (hasDraft && !pnr && wantsDraftCancellation(message)) {
+    }
+
+    // A Razorpay checkout is open for this session. Every message is resolved
+    // against that pending order until it succeeds or is abandoned.
+    else if (session.pendingPayment) {
+      const pending = session.pendingPayment;
+      if (/^payment failed/i.test(message)) {
+        const reason = message.replace(/^payment failed[:\s]*/i, '').trim();
+        data = response('text', `The payment could not be completed${reason && reason !== message ? ` (${reason})` : ''}. No money was captured and no ticket was created.\n\nReply **"retry payment"** to try again, or **"cancel payment"** to stop.`);
+      } else if (isYes(message) || /\b(retry|again|resume|pay)\b/i.test(message)) {
+        try {
+          await ensurePaymentOrder(sessionId, session);
+          data = pendingPaymentResponse(pending);
+        } catch (error) {
+          console.error('Razorpay order creation failed:', error.message);
+          data = response('text', `I could not start the Razorpay checkout: ${error.message}. Reply **"retry payment"** to try again.`);
+        }
+      } else if (isNo(message) || /\b(cancel|abort|stop|quit)\w*\b/i.test(message)) {
+        session.pendingPayment = null;
+        session.awaitingConfirmation = confirmationFrom(pending);
+        data = response('text', `Payment cancelled — no money was taken and no ticket was created.\n\nReply **"yes"** to try paying for **${pending.train.train_name}** again, or **"no"** to choose a different train.`);
+      } else {
+        data = response('text', `A payment of **₹${pending.totalFare}** for **${pending.train.train_name}** is still pending. Reply **"retry payment"** to continue, or **"cancel payment"** to stop.`);
+      }
+    }
+
+    else if (hasDraft && !pnr && wantsDraftCancellation(message)) {
       session.booking = {}; session.trainOptions = []; session.awaitingSelection = false;
       session.awaitingConfirmation = null; session.awaitingField = null; session.availabilityCheck = false;
       data = response('text', 'Your current booking process has been cancelled. No ticket was created.');
@@ -255,12 +324,22 @@ router.post('/', async (req, res) => {
     else if (session.awaitingConfirmation) {
       if (isYes(message)) {
         const { train, booking, selectedClass } = session.awaitingConfirmation;
-        const { pnr, totalFare } = saveBooking({ sessionId, customerId: bookingCustomerId, trainNumber: train.train_number, trainName: train.train_name, source: booking.source, destination: booking.destination, travelDate: displayDate(booking.date), departureTime: train.departure_time, arrivalTime: train.arrival_time, travelClass: selectedClass.type, farePerTicket: selectedClass.fare, numTickets: booking.num_tickets });
-        // The confirmed booking is persisted. Clear the in-progress draft so a
-        // later "I want to book" message starts a fresh trip, not the old one.
-        session.awaitingConfirmation = null; session.awaitingSelection = false;
-        session.trainOptions = []; session.booking = {}; session.awaitingField = null;
-        data = response('booking_confirmed', `🎉 Booking confirmed! Your PNR is **${pnr}**.`, { pnr, train, booking, selectedClass, numTickets: booking.num_tickets, totalFare, travelDate: displayDate(booking.date) });
+        const totalFare = selectedClass.fare * booking.num_tickets;
+        const travelDate = displayDate(booking.date);
+        // Create the Razorpay order first; the booking row is written only
+        // after the signature comes back verified from /payment/verify.
+        session.pendingPayment = {
+          train, booking: { ...booking }, selectedClass, orderId: null, totalFare, travelDate,
+        };
+        try {
+          await ensurePaymentOrder(sessionId, session);
+          session.awaitingConfirmation = null;
+          data = pendingPaymentResponse(session.pendingPayment);
+        } catch (error) {
+          console.error('Razorpay order creation failed:', error.message);
+          session.pendingPayment = null;
+          data = response('text', `I could not start the Razorpay checkout: ${error.message}. Please reply "yes" to try again.`);
+        }
       } else if (isNo(message)) {
         session.awaitingConfirmation = null;
         if (/date/i.test(message)) { delete session.booking.date; data = response('text', 'No problem—what new travel date would you like?'); }
@@ -343,6 +422,78 @@ router.post('/', async (req, res) => {
   } catch (error) {
     console.error('Chat route error:', error);
     return res.status(500).json({ success: false, error: 'An internal error occurred. Please try again.' });
+  }
+});
+
+// Payment verification happens server-to-server state: the client only relays
+// what Razorpay returned; the signature proves it came from Razorpay.
+router.post('/payment/verify', async (req, res) => {
+  try {
+    const { sessionId, customerId, razorpay_order_id, razorpay_payment_id, razorpay_signature, method } = req.body;
+    if (!sessionId || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({ success: false, error: 'sessionId and the Razorpay payment fields are required.' });
+    }
+    const session = sessions.get(sessionId);
+    const bookingCustomerId = customerId || sessionId;
+    if (!session || !session.pendingPayment) {
+      return res.status(400).json({ success: false, error: 'There is no pending payment for this session. Please start the booking again.' });
+    }
+    const pending = session.pendingPayment;
+    if (razorpay_order_id !== pending.orderId) {
+      return res.status(400).json({ success: false, error: 'This payment does not match your pending booking.' });
+    }
+
+    const valid = verifyPaymentSignature({
+      orderId: razorpay_order_id,
+      paymentId: razorpay_payment_id,
+      signature: razorpay_signature,
+    });
+    if (!valid) {
+      // Keep the pending payment so the user can retry from the chat.
+      return res.status(400).json({ success: false, error: 'Payment signature verification failed. Your booking was not created — please reply “retry payment”.' });
+    }
+
+    const { train, booking, selectedClass, totalFare, travelDate } = pending;
+    const { pnr } = saveBooking({
+      sessionId,
+      customerId: bookingCustomerId,
+      trainNumber: train.train_number,
+      trainName: train.train_name,
+      source: booking.source,
+      destination: booking.destination,
+      travelDate,
+      departureTime: train.departure_time,
+      arrivalTime: train.arrival_time,
+      travelClass: selectedClass.type,
+      farePerTicket: selectedClass.fare,
+      numTickets: booking.num_tickets,
+      razorpayOrderId: razorpay_order_id,
+      razorpayPaymentId: razorpay_payment_id,
+      paymentMethod: method || null,
+    });
+
+    // The confirmed booking is persisted. Clear the in-progress draft so a
+    // later "I want to book" message starts a fresh trip, not the old one.
+    session.pendingPayment = null;
+    session.awaitingConfirmation = null;
+    session.awaitingSelection = false;
+    session.trainOptions = [];
+    session.booking = {};
+    session.awaitingField = null;
+    session.availabilityCheck = false;
+
+    const data = response('booking_confirmed',
+      `🎉 Booking confirmed! Your PNR is **${pnr}**. Payment of **₹${totalFare}** received via Razorpay (test mode).`,
+      {
+        pnr, train, booking, selectedClass,
+        numTickets: booking.num_tickets, totalFare, travelDate,
+        paymentId: razorpay_payment_id, paymentMethod: method || null,
+      });
+    session.conversationHistory.push({ role: 'assistant', content: data.text });
+    return res.json({ success: true, data });
+  } catch (error) {
+    console.error('Payment verification error:', error);
+    return res.status(500).json({ success: false, error: 'Payment verification failed. Please try again.' });
   }
 });
 

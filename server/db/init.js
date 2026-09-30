@@ -60,6 +60,10 @@ async function initDb() {
     db.run('ALTER TABLE bookings ADD COLUMN customer_id TEXT');
   }
   db.run('UPDATE bookings SET customer_id = session_id WHERE customer_id IS NULL');
+  // Razorpay payment audit trail (test mode in this demo).
+  if (!columns.includes('razorpay_order_id')) db.run('ALTER TABLE bookings ADD COLUMN razorpay_order_id TEXT');
+  if (!columns.includes('razorpay_payment_id')) db.run('ALTER TABLE bookings ADD COLUMN razorpay_payment_id TEXT');
+  if (!columns.includes('payment_method')) db.run('ALTER TABLE bookings ADD COLUMN payment_method TEXT');
 
   saveDbToDisk();
   return db;
