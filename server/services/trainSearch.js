@@ -102,12 +102,16 @@ function searchTrains({ source, destination, date, time_preference, travel_class
     });
   }
 
-  // Filter by travel_class if provided
+  // Filter by travel_class if provided. "AC"/"non-AC" wording is resolved
+  // through the normalized category, so it matches every AC-typed class
+  // (Chair Car, Executive Chair Car, ...) consistently.
   if (travel_class) {
     const classLower = travel_class.toLowerCase();
-    results = results.filter((train) =>
-      train.classes.some((c) => c.type.toLowerCase().includes(classLower) || classLower.includes(c.type.toLowerCase()))
-    );
+    const category = classCategoryOf(classLower);
+    results = results.filter((train) => (category
+      ? train.classes.some((c) => c.category === category)
+      : train.classes.some((c) => c.type.toLowerCase().includes(classLower) || classLower.includes(c.type.toLowerCase()))
+    ));
   }
 
   // Return max 4 results
@@ -122,4 +126,18 @@ function routeExists(source, destination) {
   ));
 }
 
-module.exports = { searchTrains, normalizeCity, isSupportedCity, getDayAbbrev, parseTravelDate, routeExists, SUPPORTED_CITIES };
+// Maps free-form class wording onto the normalized `category` field
+// ("AC" | "Non-AC") that every class object carries. Returns null when the
+// value names a concrete class type (Sleeper, Chair Car, ...) instead.
+function classCategoryOf(value) {
+  const text = String(value ?? '').toLowerCase().trim();
+  if (!text) return null;
+  if (/^(non[\s-]?ac|non[\s-]?air[\s-]?conditioned)$/.test(text)) return 'Non-AC';
+  if (/^(ac|a\/c|air[\s-]?conditioned)$/.test(text)) return 'AC';
+  return null;
+}
+
+module.exports = {
+  searchTrains, normalizeCity, isSupportedCity, getDayAbbrev, parseTravelDate,
+  routeExists, classCategoryOf, SUPPORTED_CITIES,
+};

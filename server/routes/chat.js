@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { callLLM } = require('../services/llm');
 const {
-  searchTrains, isSupportedCity, parseTravelDate, routeExists, SUPPORTED_CITIES,
+  searchTrains, isSupportedCity, parseTravelDate, routeExists, classCategoryOf, SUPPORTED_CITIES,
 } = require('../services/trainSearch');
 const { saveBooking, getBookingsByCustomer, getBookingByPNRForCustomer, cancelBooking } = require('../services/bookingStore');
 const { createOrder, verifyPaymentSignature } = require('../services/payment');
@@ -54,7 +54,7 @@ function localExtraction(message) {
   if (date) result.date = date[1];
   const time = value.match(/\b(morning|afternoon|evening|night)\b/i);
   if (time) result.time_preference = time[1].toLowerCase();
-  const travelClass = value.match(/\b(sleeper|general|executive chair car|chair car|ac chair car|ac)\b/i);
+  const travelClass = value.match(/\b(non[\s-]?ac|sleeper|general|executive chair car|ac chair car|chair car|ac)\b/i);
   if (travelClass) result.travel_class = travelClass[1];
   return result;
 }
@@ -133,7 +133,18 @@ function selectionMatches(message, options) {
     const fares = options.map(({ train }) => Math.min(...train.classes.filter((c) => c.seats_available > 0).map((c) => c.fare)));
     const lowest = Math.min(...fares); fares.forEach((fare, index) => { if (fare === lowest) matches.add(index); });
   }
-  if (/\b(ac|air.?conditioned)\b/.test(text)) options.forEach(({ train }, index) => { if (train.classes.some((c) => /ac|chair/i.test(c.type) && c.seats_available > 0)) matches.add(index); });
+  // "the AC one" / "the non-AC one" resolve through the normalized category so
+  // every AC class type (Chair Car, Executive Chair Car, ...) counts.
+  if (/\b(ac|a\/c|air.?conditioned)\b/.test(text) && !/\bnon[\s-]?ac\b/.test(text)) {
+    options.forEach(({ train }, index) => {
+      if (train.classes.some((c) => c.category === 'AC' && c.seats_available > 0)) matches.add(index);
+    });
+  }
+  if (/\bnon[\s-]?ac\b/.test(text)) {
+    options.forEach(({ train }, index) => {
+      if (train.classes.some((c) => c.category === 'Non-AC' && c.seats_available > 0)) matches.add(index);
+    });
+  }
   return [...matches];
 }
 
@@ -141,6 +152,10 @@ function resolveSelectedClass(train, requestedClass) {
   const available = train.classes.filter((item) => item.seats_available > 0);
   if (!requestedClass) return available[0] || null;
   const requested = requestedClass.toLowerCase().trim();
+  // "AC" / "non-AC" wording selects by the normalized category; concrete names
+  // (Sleeper, Chair Car, ...) still select that exact class type.
+  const category = classCategoryOf(requested);
+  if (category) return available.find((item) => item.category === category) || null;
   return available.find((item) => item.type.toLowerCase() === requested)
     || available.find((item) => item.type.toLowerCase().includes(requested))
     || available.find((item) => requested.includes(item.type.toLowerCase()))
