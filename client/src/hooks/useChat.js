@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 // Generate a stable session ID per browser session
 const SESSION_ID = `session_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -81,6 +81,24 @@ export function useChat() {
   const [isLoading, setIsLoading] = useState(false);
   // Train-card click handler, so option cards inside a message can reply.
   const selectTrainRef = useRef(null);
+  // Callbacks handed to the food-ordering widgets (booking list, stop
+  // dropdown, menu checkboxes, summary buttons). The object is created once
+  // because each food message embeds it when the message is added — while a
+  // request is still in flight. Its methods therefore call through
+  // sendMessageRef, so they always reach the *current* sendMessage instead of
+  // a stale closure whose isLoading guard would silently drop the click.
+  const sendMessageRef = useRef(null);
+  const foodActionsRef = useRef(null);
+  if (foodActionsRef.current === null) {
+    foodActionsRef.current = {
+      selectBooking: (index) => { sendMessageRef.current?.(`select booking ${index + 1}`); },
+      selectStop: (index) => { sendMessageRef.current?.(`select stop ${index + 1}`); },
+      submitItems: (indices) => { sendMessageRef.current?.(`food items: ${indices.map((index) => index + 1).join(',')}`); },
+      confirmOrder: () => { sendMessageRef.current?.('confirm food order'); },
+      changeItems: () => { sendMessageRef.current?.('no'); },
+      cancelOrder: () => { sendMessageRef.current?.('cancel food order'); },
+    };
+  }
 
   const addMessage = useCallback((msg) => {
     setMessages(prev => [...prev, { id: Date.now() + Math.random(), timestamp: new Date(), ...msg }]);
@@ -192,6 +210,18 @@ export function useChat() {
           addMessage({ role: 'bot', type: 'text', text: `⚠️ Sorry, something went wrong: ${error.message}. Please try again.` });
         }
       }
+    } else if (data.type === 'food_bookings') {
+      addMessage({ role: 'bot', type: 'food_bookings', text: data.text, bookings: data.bookings, actions: foodActionsRef.current });
+    } else if (data.type === 'food_stops') {
+      addMessage({ role: 'bot', type: 'food_stops', text: data.text, booking: data.booking, stops: data.stops, actions: foodActionsRef.current });
+    } else if (data.type === 'food_menu') {
+      addMessage({ role: 'bot', type: 'food_menu', text: data.text, menu: data.menu, booking: data.booking, stop: data.stop, selectedKeys: data.selectedKeys, actions: foodActionsRef.current });
+    } else if (data.type === 'food_summary') {
+      const summary = { pnr: data.pnr, trainName: data.trainName, station: data.station, arrivalTime: data.arrivalTime, items: data.items, total: data.total };
+      addMessage({ role: 'bot', type: 'food_summary', text: data.text, summary, actions: foodActionsRef.current });
+    } else if (data.type === 'food_confirmed') {
+      const order = { orderId: data.orderId, pnr: data.pnr, trainName: data.trainName, station: data.station, arrivalTime: data.arrivalTime, items: data.items, total: data.total };
+      addMessage({ role: 'bot', type: 'food_confirmed', text: data.text, order });
     } else {
       addMessage({ role: 'bot', type: 'text', text: data.text });
     }
@@ -223,6 +253,12 @@ export function useChat() {
     // User clicked "Select" on a train card — send as a message
     const classText = travelClass ? ` in ${travelClass} class` : '';
     await sendMessage(`I'll take option ${index + 1}${classText}`);
+  }, [sendMessage]);
+
+  // Food widgets talk to the server through the normal chat channel so every
+  // step stays visible (and server-owned) in the conversation.
+  useEffect(() => {
+    sendMessageRef.current = sendMessage;
   }, [sendMessage]);
 
   return { messages, isLoading, sendMessage, handleSelectTrain, sessionId: SESSION_ID, customerId: CUSTOMER_ID };

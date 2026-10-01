@@ -26,7 +26,7 @@ time_preference, travel_class
 
 RESPONSE JSON SCHEMA:
 {
-  "intent": "book_ticket | select_train | confirm_booking | cancel_booking | check_pnr | other",
+  "intent": "book_ticket | select_train | confirm_booking | cancel_booking | check_pnr | book_food | other",
   "bookings": [
     {
       "booking_index": 0,
@@ -54,6 +54,10 @@ INTENT GUIDE:
 - confirm_booking: User says yes, confirm, proceed, etc.
 - cancel_booking: User wants to cancel.
 - check_pnr: User wants to check a PNR.
+- book_food: User EXPLICITLY asks to order, book or buy food/a meal for their
+  journey (for example "order food", "I want food"). Only use this intent when
+  the user asks for it directly — never infer it from a booking, a confirmation
+  or a payment, and never suggest ordering food yourself.
 - other: Greetings or unrelated questions.
 
 IMPORTANT:

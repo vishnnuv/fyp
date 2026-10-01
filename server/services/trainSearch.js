@@ -137,7 +137,12 @@ function classCategoryOf(value) {
   return null;
 }
 
+function getTrainByNumber(trainNumber) {
+  if (!trainNumber) return null;
+  return trainData.find((train) => train.train_number === String(trainNumber)) || null;
+}
+
 module.exports = {
   searchTrains, normalizeCity, isSupportedCity, getDayAbbrev, parseTravelDate,
-  routeExists, classCategoryOf, SUPPORTED_CITIES,
+  routeExists, classCategoryOf, getTrainByNumber, SUPPORTED_CITIES,
 };

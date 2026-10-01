@@ -9,6 +9,11 @@
     "arrival_time": "10:00",
     "duration": "4h 10m",
     "days_of_run": ["Sun", "Mon", "Tue", "Thu", "Fri", "Sat"],
+    "route_stops": [
+      { "station": "Ambur", "arrival_time": "07:05", "halt_minutes": 2 },
+      { "station": "Jolarpettai", "arrival_time": "07:45", "halt_minutes": 5 },
+      { "station": "Hosur", "arrival_time": "09:10", "halt_minutes": 5 }
+    ],
     "classes": [
       { "type": "Chair Car", "category": "AC", "fare": 840, "seats_available": 42 },
       { "type": "Executive Chair Car", "category": "AC", "fare": 1680, "seats_available": 14 }
@@ -24,6 +29,11 @@
     "arrival_time": "11:05",
     "duration": "5h 05m",
     "days_of_run": ["Sun", "Mon", "Tue", "Thu", "Fri", "Sat"],
+    "route_stops": [
+      { "station": "Katpadi", "arrival_time": "07:00", "halt_minutes": 5 },
+      { "station": "Jolarpettai", "arrival_time": "08:15", "halt_minutes": 5 },
+      { "station": "Hosur", "arrival_time": "10:15", "halt_minutes": 5 }
+    ],
     "classes": [
       { "type": "Chair Car", "category": "AC", "fare": 580, "seats_available": 58 },
       { "type": "Executive Chair Car", "category": "AC", "fare": 1050, "seats_available": 20 }
@@ -39,6 +49,11 @@
     "arrival_time": "03:40",
     "duration": "6h 10m",
     "days_of_run": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "route_stops": [
+      { "station": "Katpadi", "arrival_time": "22:45", "halt_minutes": 5 },
+      { "station": "Jolarpettai", "arrival_time": "00:10", "halt_minutes": 10 },
+      { "station": "Hosur", "arrival_time": "02:35", "halt_minutes": 5 }
+    ],
     "classes": [
       { "type": "AC", "category": "AC", "fare": 875, "seats_available": 28 },
       { "type": "Sleeper", "category": "Non-AC", "fare": 325, "seats_available": 70 },
@@ -55,6 +70,11 @@
     "arrival_time": "03:49",
     "duration": "6h 34m",
     "days_of_run": ["Fri"],
+    "route_stops": [
+      { "station": "Arakkonam", "arrival_time": "22:15", "halt_minutes": 5 },
+      { "station": "Jolarpettai", "arrival_time": "00:05", "halt_minutes": 5 },
+      { "station": "Hosur", "arrival_time": "02:40", "halt_minutes": 5 }
+    ],
     "classes": [
       { "type": "AC", "category": "AC", "fare": 870, "seats_available": 16 },
       { "type": "Sleeper", "category": "Non-AC", "fare": 330, "seats_available": 52 },
@@ -71,6 +91,11 @@
     "arrival_time": "04:53",
     "duration": "5h 23m",
     "days_of_run": ["Sat"],
+    "route_stops": [
+      { "station": "Katpadi", "arrival_time": "00:40", "halt_minutes": 5 },
+      { "station": "Jolarpettai", "arrival_time": "02:00", "halt_minutes": 5 },
+      { "station": "Hosur", "arrival_time": "03:55", "halt_minutes": 5 }
+    ],
     "classes": [
       { "type": "AC", "category": "AC", "fare": 890, "seats_available": 22 },
       { "type": "Sleeper", "category": "Non-AC", "fare": 340, "seats_available": 48 }
@@ -86,6 +111,11 @@
     "arrival_time": "19:20",
     "duration": "4h 30m",
     "days_of_run": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "route_stops": [
+      { "station": "Hosur", "arrival_time": "15:55", "halt_minutes": 5 },
+      { "station": "Jolarpettai", "arrival_time": "17:15", "halt_minutes": 5 },
+      { "station": "Ambur", "arrival_time": "18:10", "halt_minutes": 2 }
+    ],
     "classes": [
       { "type": "Chair Car", "category": "AC", "fare": 840, "seats_available": 36 },
       { "type": "Executive Chair Car", "category": "AC", "fare": 1680, "seats_available": 10 }
@@ -101,6 +131,11 @@
     "arrival_time": "22:35",
     "duration": "5h 20m",
     "days_of_run": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "route_stops": [
+      { "station": "Hosur", "arrival_time": "18:20", "halt_minutes": 5 },
+      { "station": "Jolarpettai", "arrival_time": "19:40", "halt_minutes": 5 },
+      { "station": "Katpadi", "arrival_time": "21:10", "halt_minutes": 5 }
+    ],
     "classes": [
       { "type": "AC", "category": "AC", "fare": 900, "seats_available": 24 },
       { "type": "Sleeper", "category": "Non-AC", "fare": 345, "seats_available": 60 },
@@ -117,6 +152,11 @@
     "arrival_time": "21:20",
     "duration": "4h 55m",
     "days_of_run": ["Sun", "Mon", "Tue", "Thu", "Fri", "Sat"],
+    "route_stops": [
+      { "station": "Hosur", "arrival_time": "17:25", "halt_minutes": 5 },
+      { "station": "Jolarpettai", "arrival_time": "18:40", "halt_minutes": 5 },
+      { "station": "Katpadi", "arrival_time": "20:05", "halt_minutes": 5 }
+    ],
     "classes": [
       { "type": "Chair Car", "category": "AC", "fare": 620, "seats_available": 50 },
       { "type": "Executive Chair Car", "category": "AC", "fare": 1120, "seats_available": 12 }
@@ -132,6 +172,12 @@
     "arrival_time": "05:40",
     "duration": "9h 25m",
     "days_of_run": ["Mon", "Wed", "Fri", "Sun"],
+    "route_stops": [
+      { "station": "Erode", "arrival_time": "21:45", "halt_minutes": 10 },
+      { "station": "Salem", "arrival_time": "22:35", "halt_minutes": 5 },
+      { "station": "Jolarpettai", "arrival_time": "00:55", "halt_minutes": 5 },
+      { "station": "Katpadi", "arrival_time": "03:10", "halt_minutes": 5 }
+    ],
     "classes": [
       { "type": "AC", "category": "AC", "fare": 1120, "seats_available": 30 },
       { "type": "Sleeper", "category": "Non-AC", "fare": 410, "seats_available": 78 },
@@ -148,6 +194,11 @@
     "arrival_time": "21:15",
     "duration": "6h 55m",
     "days_of_run": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "route_stops": [
+      { "station": "Erode", "arrival_time": "15:35", "halt_minutes": 5 },
+      { "station": "Salem", "arrival_time": "16:25", "halt_minutes": 5 },
+      { "station": "Jolarpettai", "arrival_time": "18:45", "halt_minutes": 5 }
+    ],
     "classes": [
       { "type": "AC", "category": "AC", "fare": 980, "seats_available": 12 },
       { "type": "Sleeper", "category": "Non-AC", "fare": 370, "seats_available": 54 },
@@ -164,6 +215,11 @@
     "arrival_time": "13:15",
     "duration": "7h 15m",
     "days_of_run": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "route_stops": [
+      { "station": "Jolarpettai", "arrival_time": "08:20", "halt_minutes": 5 },
+      { "station": "Salem", "arrival_time": "10:35", "halt_minutes": 5 },
+      { "station": "Erode", "arrival_time": "11:25", "halt_minutes": 5 }
+    ],
     "classes": [
       { "type": "AC", "category": "AC", "fare": 980, "seats_available": 8 },
       { "type": "Sleeper", "category": "Non-AC", "fare": 370, "seats_available": 46 },
@@ -180,6 +236,10 @@
     "arrival_time": "20:25",
     "duration": "5h 10m",
     "days_of_run": ["Mon", "Wed", "Fri"],
+    "route_stops": [
+      { "station": "Jolarpettai", "arrival_time": "17:15", "halt_minutes": 5 },
+      { "station": "Hosur", "arrival_time": "19:15", "halt_minutes": 5 }
+    ],
     "classes": [
       { "type": "AC Chair Car", "category": "AC", "fare": 990, "seats_available": 40 }
     ]
@@ -194,6 +254,12 @@
     "arrival_time": "22:30",
     "duration": "22h 45m",
     "days_of_run": ["Tue", "Fri", "Sun"],
+    "route_stops": [
+      { "station": "Villupuram", "arrival_time": "01:10", "halt_minutes": 5 },
+      { "station": "Erode", "arrival_time": "05:40", "halt_minutes": 10 },
+      { "station": "Solapur", "arrival_time": "14:20", "halt_minutes": 10 },
+      { "station": "Pune", "arrival_time": "19:35", "halt_minutes": 10 }
+    ],
     "classes": [
       { "type": "AC", "category": "AC", "fare": 2150, "seats_available": 20 },
       { "type": "Sleeper", "category": "Non-AC", "fare": 780, "seats_available": 48 },
@@ -210,6 +276,12 @@
     "arrival_time": "20:05",
     "duration": "22h 50m",
     "days_of_run": ["Mon", "Wed", "Sat"],
+    "route_stops": [
+      { "station": "Pune", "arrival_time": "00:20", "halt_minutes": 10 },
+      { "station": "Solapur", "arrival_time": "05:30", "halt_minutes": 10 },
+      { "station": "Erode", "arrival_time": "14:45", "halt_minutes": 10 },
+      { "station": "Villupuram", "arrival_time": "18:40", "halt_minutes": 5 }
+    ],
     "classes": [
       { "type": "AC", "category": "AC", "fare": 2080, "seats_available": 15 },
       { "type": "Sleeper", "category": "Non-AC", "fare": 760, "seats_available": 40 },
@@ -226,6 +298,11 @@
     "arrival_time": "11:20",
     "duration": "5h 40m",
     "days_of_run": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "route_stops": [
+      { "station": "Hosur", "arrival_time": "06:45", "halt_minutes": 5 },
+      { "station": "Salem", "arrival_time": "08:35", "halt_minutes": 5 },
+      { "station": "Erode", "arrival_time": "09:50", "halt_minutes": 5 }
+    ],
     "classes": [
       { "type": "AC Chair Car", "category": "AC", "fare": 690, "seats_available": 22 },
       { "type": "General", "category": "Non-AC", "fare": 145, "seats_available": 100 }
@@ -241,6 +318,11 @@
     "arrival_time": "05:15",
     "duration": "6h 35m",
     "days_of_run": ["Mon", "Wed", "Fri", "Sun"],
+    "route_stops": [
+      { "station": "Erode", "arrival_time": "23:55", "halt_minutes": 5 },
+      { "station": "Salem", "arrival_time": "00:45", "halt_minutes": 5 },
+      { "station": "Hosur", "arrival_time": "03:55", "halt_minutes": 5 }
+    ],
     "classes": [
       { "type": "AC", "category": "AC", "fare": 950, "seats_available": 26 },
       { "type": "Sleeper", "category": "Non-AC", "fare": 360, "seats_available": 64 },
@@ -257,6 +339,12 @@
     "arrival_time": "16:45",
     "duration": "20h 45m",
     "days_of_run": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "route_stops": [
+      { "station": "Hosur", "arrival_time": "21:10", "halt_minutes": 5 },
+      { "station": "Erode", "arrival_time": "00:40", "halt_minutes": 10 },
+      { "station": "Solapur", "arrival_time": "09:15", "halt_minutes": 10 },
+      { "station": "Pune", "arrival_time": "13:40", "halt_minutes": 10 }
+    ],
     "classes": [
       { "type": "AC", "category": "AC", "fare": 1950, "seats_available": 18 },
       { "type": "Sleeper", "category": "Non-AC", "fare": 700, "seats_available": 44 },
@@ -273,6 +361,12 @@
     "arrival_time": "16:50",
     "duration": "20h 40m",
     "days_of_run": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "route_stops": [
+      { "station": "Pune", "arrival_time": "23:15", "halt_minutes": 10 },
+      { "station": "Solapur", "arrival_time": "04:30", "halt_minutes": 10 },
+      { "station": "Erode", "arrival_time": "13:05", "halt_minutes": 10 },
+      { "station": "Hosur", "arrival_time": "15:35", "halt_minutes": 5 }
+    ],
     "classes": [
       { "type": "AC", "category": "AC", "fare": 1950, "seats_available": 20 },
       { "type": "Sleeper", "category": "Non-AC", "fare": 700, "seats_available": 50 },
@@ -289,6 +383,11 @@
     "arrival_time": "05:15",
     "duration": "6h 15m",
     "days_of_run": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "route_stops": [
+      { "station": "Hosur", "arrival_time": "00:10", "halt_minutes": 5 },
+      { "station": "Jolarpettai", "arrival_time": "01:40", "halt_minutes": 5 },
+      { "station": "Katpadi", "arrival_time": "03:25", "halt_minutes": 5 }
+    ],
     "classes": [
       { "type": "AC", "category": "AC", "fare": 860, "seats_available": 20 },
       { "type": "Sleeper", "category": "Non-AC", "fare": 320, "seats_available": 58 },
@@ -305,6 +404,11 @@
     "arrival_time": "11:10",
     "duration": "5h 10m",
     "days_of_run": ["Mon", "Wed", "Fri"],
+    "route_stops": [
+      { "station": "Hosur", "arrival_time": "07:05", "halt_minutes": 5 },
+      { "station": "Jolarpettai", "arrival_time": "08:45", "halt_minutes": 5 },
+      { "station": "Ambur", "arrival_time": "09:50", "halt_minutes": 2 }
+    ],
     "classes": [
       { "type": "AC Chair Car", "category": "AC", "fare": 990, "seats_available": 38 }
     ]
@@ -319,6 +423,11 @@
     "arrival_time": "05:00",
     "duration": "6h 30m",
     "days_of_run": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "route_stops": [
+      { "station": "Hosur", "arrival_time": "23:40", "halt_minutes": 5 },
+      { "station": "Jolarpettai", "arrival_time": "01:15", "halt_minutes": 5 },
+      { "station": "Katpadi", "arrival_time": "03:15", "halt_minutes": 5 }
+    ],
     "classes": [
       { "type": "AC", "category": "AC", "fare": 870, "seats_available": 18 },
       { "type": "Sleeper", "category": "Non-AC", "fare": 330, "seats_available": 66 },

@@ -65,6 +65,24 @@ async function initDb() {
   if (!columns.includes('razorpay_payment_id')) db.run('ALTER TABLE bookings ADD COLUMN razorpay_payment_id TEXT');
   if (!columns.includes('payment_method')) db.run('ALTER TABLE bookings ADD COLUMN payment_method TEXT');
 
+  // Food delivery orders (separate from ticket bookings, linked by PNR).
+  db.run(`
+    CREATE TABLE IF NOT EXISTS food_orders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id TEXT UNIQUE NOT NULL,
+      pnr TEXT NOT NULL,
+      session_id TEXT,
+      customer_id TEXT,
+      train_number TEXT,
+      train_name TEXT,
+      station TEXT NOT NULL,
+      items TEXT NOT NULL,
+      total INTEGER NOT NULL,
+      status TEXT DEFAULT 'CONFIRMED',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   saveDbToDisk();
   return db;
 }

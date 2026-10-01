@@ -2,10 +2,12 @@ const express = require('express');
 const router = express.Router();
 const { callLLM } = require('../services/llm');
 const {
-  searchTrains, isSupportedCity, parseTravelDate, routeExists, classCategoryOf, SUPPORTED_CITIES,
+  searchTrains, isSupportedCity, parseTravelDate, routeExists, classCategoryOf, getTrainByNumber, SUPPORTED_CITIES,
 } = require('../services/trainSearch');
 const { saveBooking, getBookingsByCustomer, getBookingByPNRForCustomer, cancelBooking } = require('../services/bookingStore');
 const { createOrder, verifyPaymentSignature } = require('../services/payment');
+const { saveFoodOrder, getFoodOrdersBySession } = require('../services/foodStore');
+const { FOOD_MENU, parseSelectedItems } = require('../services/foodMenu');
 
 // State is deliberately server-owned. In particular, trainOptions is the exact
 // whitelist from which a later selection is allowed to resolve.
@@ -17,7 +19,7 @@ function getSession(sessionId) {
     sessions.set(sessionId, {
       conversationHistory: [], booking: {}, trainOptions: [],
       awaitingSelection: false, awaitingConfirmation: null, awaitingCancellation: null,
-      awaitingField: null, availabilityCheck: false, pendingPayment: null,
+      awaitingField: null, availabilityCheck: false, pendingPayment: null, foodOrder: null,
     });
   }
   return sessions.get(sessionId);
@@ -34,6 +36,7 @@ function stateLog(sessionId, session) {
     awaitingSelection: session.awaitingSelection, awaitingConfirmation: Boolean(session.awaitingConfirmation),
     awaitingCancellation: Boolean(session.awaitingCancellation),
     pendingPayment: session.pendingPayment ? session.pendingPayment.orderId : null,
+    foodStep: session.foodOrder ? session.foodOrder.step : null,
     awaitingField: session.awaitingField,
   }));
 }
@@ -237,6 +240,186 @@ function confirmationFrom(pending) {
   return { train: pending.train, booking: pending.booking, selectedClass: pending.selectedClass };
 }
 
+// --- Food ordering ---------------------------------------------------------
+// A separate intent that is only ever started by an explicit request — it is
+// never chained after a ticket booking, confirmation or payment.
+
+function isFoodRequest(message) {
+  const value = String(message || '').trim();
+  if (!value) return false;
+  // Cancellation wording is never a fresh request (handled by the active step).
+  if (/^\s*(?:cancel|abort|stop|never\s*mind)\b/i.test(value)) return false;
+  const FOOD_WORD = '(?:food|meal|lunch|dinner|breakfast|snacks?|refreshments?)';
+  const VERB = '(?:order|book|want|need|get|buy|request|place|grab|have)';
+  return new RegExp(`\\b${VERB}\\b[^.?!]{0,45}\\b${FOOD_WORD}\\b`, 'i').test(value)
+    || new RegExp(`\\b${FOOD_WORD}s?\\s+(?:order|delivery|for my|onboard)\\b`, 'i').test(value);
+}
+
+function foodBookingCard(booking) {
+  return {
+    pnr: booking.pnr, train_number: booking.train_number, train_name: booking.train_name,
+    source: booking.source, destination: booking.destination, travel_date: booking.travel_date,
+    departure_time: booking.departure_time, travel_class: booking.travel_class,
+    num_tickets: booking.num_tickets, total_fare: booking.total_fare, status: booking.status,
+  };
+}
+
+const ORDINALS = { first: 0, second: 1, third: 2, fourth: 3, fifth: 4, sixth: 5, seventh: 6, eighth: 7 };
+
+function ordinalIndex(text) {
+  const found = Object.entries(ORDINALS).find(([word]) => new RegExp(`\\b${word}\\b`).test(text));
+  return found ? found[1] : -1;
+}
+
+function pickBookingFromList(message, bookings) {
+  const pnr = extractPNR(message);
+  if (pnr) return bookings.find((item) => item.pnr === pnr) || null;
+
+  const text = String(message).toLowerCase();
+  const ordinal = ordinalIndex(text);
+  if (ordinal >= 0 && ordinal < bookings.length) return bookings[ordinal];
+
+  const number = text.match(/\b(?:option|booking|select|pnr|#)?\s*(\d{1,2})\b/);
+  if (number) {
+    const index = Number(number[1]) - 1;
+    return index >= 0 && index < bookings.length ? bookings[index] : null;
+  }
+  return bookings.find((item) => text.includes(String(item.train_name).toLowerCase())) || null;
+}
+
+function pickStopFromList(message, stops) {
+  const text = String(message).toLowerCase();
+  const ordinal = ordinalIndex(text);
+  if (ordinal >= 0 && ordinal < stops.length) return stops[ordinal];
+
+  const number = text.match(/\b(?:stop|option|station|select|#)?\s*(\d{1,2})\b/);
+  if (number) {
+    const index = Number(number[1]) - 1;
+    return index >= 0 && index < stops.length ? stops[index] : null;
+  }
+  return stops.find((stop) => text.includes(String(stop.station).toLowerCase())) || null;
+}
+
+function foodMenuPayload(food) {
+  return {
+    menu: FOOD_MENU,
+    booking: foodBookingCard(food.booking),
+    stop: food.stop,
+    selectedKeys: food.items.map((item) => item.key),
+  };
+}
+
+function foodSummaryPayload(food) {
+  const total = food.items.reduce((sum, item) => sum + item.price, 0);
+  return {
+    pnr: food.booking.pnr,
+    trainNumber: food.booking.train_number,
+    trainName: food.booking.train_name,
+    station: food.stop.station,
+    arrivalTime: food.stop.arrival_time,
+    items: food.items,
+    total,
+  };
+}
+
+async function handleFoodFlow({ sessionId, session, customerId, message }) {
+  const food = session.foodOrder;
+
+  // Step 1 — no flow yet: list the customer's confirmed bookings.
+  if (!food) {
+    const bookings = getBookingsByCustomer(customerId).filter((item) => item.status === 'CONFIRMED');
+    if (!bookings.length) {
+      return response('text', "I couldn't find any confirmed bookings, so I can't place a food order yet. Please book a ticket first, then ask me again to order food.");
+    }
+    session.foodOrder = { step: 'select_booking', bookings, booking: null, stop: null, items: [] };
+    return response('food_bookings',
+      `You have **${bookings.length} confirmed booking${bookings.length > 1 ? 's' : ''}**. Which one is this food order for?\nPick a booking below, or reply **"cancel food order"** to stop.`,
+      { bookings: bookings.map(foodBookingCard) });
+  }
+
+  // Cancelling only ever clears the food order — tickets are untouched.
+  if (/\b(cancel|abort|quit|never\s*mind)\b/i.test(message) || /^stop\b/i.test(message)) {
+    session.foodOrder = null;
+    return response('text', 'Food order cancelled — nothing was charged and your tickets are unaffected. Ask me any time to order food.');
+  }
+
+  // Step 1b — the booking is chosen: show that train's delivery stops.
+  if (food.step === 'select_booking') {
+    const booking = pickBookingFromList(message, food.bookings);
+    if (!booking) {
+      return response('food_bookings', `I couldn't match that to one of your bookings. Please pick one of these:`, { bookings: food.bookings.map(foodBookingCard) });
+    }
+    const train = getTrainByNumber(booking.train_number);
+    const stops = train?.route_stops || [];
+    if (!stops.length) {
+      session.foodOrder = null;
+      return response('text', `Sorry, I don't have stop information for **${booking.train_name}**, so delivery can't be arranged on that train.`);
+    }
+    food.booking = booking;
+    food.step = 'select_stop';
+    return response('food_stops',
+      `Food for **${booking.pnr}** — **${booking.train_name}** (${booking.source} → ${booking.destination}).\nWhere should we deliver it? Choose a stop:`,
+      { booking: foodBookingCard(booking), stops });
+  }
+
+  // Step 2 — delivery stop chosen: show the menu.
+  if (food.step === 'select_stop') {
+    const stops = getTrainByNumber(food.booking.train_number)?.route_stops || [];
+    const stop = pickStopFromList(message, stops);
+    if (!stop) {
+      return response('food_stops', `Please choose one of these delivery stops:`, { booking: foodBookingCard(food.booking), stops });
+    }
+    food.stop = stop;
+    food.step = 'select_items';
+    return response('food_menu',
+      `Delivery at **${stop.station}** (arrives ${stop.arrival_time}). Here is the menu — select the items you'd like:`,
+      foodMenuPayload(food));
+  }
+
+  // Step 3 — menu chosen: build the summary.
+  if (food.step === 'select_items') {
+    const picks = parseSelectedItems(message);
+    if (!picks.length) {
+      return response('food_menu',
+        `Please select at least one item — you can tick items and press **Add to order**, or type something like *"1 and 4"* or *"veg meal and tea"*:`,
+        foodMenuPayload(food));
+    }
+    food.items = picks.map((index) => FOOD_MENU[index]);
+    food.step = 'confirm';
+    return response('food_summary', `Here is your order summary. Shall I place it?`, foodSummaryPayload(food));
+  }
+
+  // Step 4 — explicit confirmation before anything is saved.
+  if (food.step === 'confirm') {
+    if (isYes(message) || /\b(confirm|place(?:\s+the)?\s+order)\b/i.test(message)) {
+      const summary = foodSummaryPayload(food);
+      const { orderId } = saveFoodOrder({
+        pnr: summary.pnr,
+        station: summary.station,
+        items: summary.items,
+        total: summary.total,
+        sessionId,
+        customerId,
+        trainNumber: summary.trainNumber,
+        trainName: summary.trainName,
+      });
+      session.foodOrder = null;
+      return response('food_confirmed',
+        `🎉 Food order **${orderId}** placed for PNR **${summary.pnr}**!\n**${summary.station}** — ${summary.items.map((item) => item.name).join(', ')} — **₹${summary.total}**.`,
+        { orderId, ...summary });
+    }
+    if (isNo(message)) {
+      food.items = [];
+      food.step = 'select_items';
+      return response('food_menu', `No problem — pick your items again:`, foodMenuPayload(food));
+    }
+    return response('food_summary', `Please reply **"yes"** to place this order or **"no"** to change your selection:`, foodSummaryPayload(food));
+  }
+
+  session.foodOrder = null;
+  return response('text', 'Food ordering restarted. What would you like to order?');
+}
+
 router.post('/', async (req, res) => {
   try {
     const { message, sessionId, customerId } = req.body;
@@ -291,6 +474,12 @@ router.post('/', async (req, res) => {
       } else {
         data = response('text', `A payment of **₹${pending.totalFare}** for **${pending.train.train_name}** is still pending. Reply **"retry payment"** to continue, or **"cancel payment"** to stop.`);
       }
+    }
+
+    // The food flow is an independent intent: it starts only on an explicit
+    // request and leaves any in-progress ticket booking untouched.
+    else if (session.foodOrder || isFoodRequest(message)) {
+      data = await handleFoodFlow({ sessionId, session, customerId: bookingCustomerId, message });
     }
 
     else if (hasDraft && !pnr && wantsDraftCancellation(message)) {
@@ -390,8 +579,11 @@ router.post('/', async (req, res) => {
 
       // Do not force greetings and unrelated messages into the booking form.
       // A pending field still takes priority, so a reply such as "Chennai"
-      // continues the current booking as expected.
-      if (isGreetingOrGeneralMessage) {
+      // continues the current booking as expected. The model can also flag the
+      // explicit food intent (the route's regex check usually catches it first).
+      if (llmResult.intent === 'book_food') {
+        data = await handleFoodFlow({ sessionId, session, customerId: bookingCustomerId, message });
+      } else if (isGreetingOrGeneralMessage) {
         data = response('text', llmResult.reply || 'Hi! How can I help you book a train today?');
       } else {
       // A short answer to a one-at-a-time prompt is contextual data, not a new intent.
@@ -515,6 +707,10 @@ router.post('/payment/verify', async (req, res) => {
 router.get('/bookings/:sessionId', (req, res) => {
   const { getBookingsBySession } = require('../services/bookingStore');
   res.json({ bookings: getBookingsBySession(req.params.sessionId) });
+});
+
+router.get('/food-orders/:sessionId', (req, res) => {
+  res.json({ orders: getFoodOrdersBySession(req.params.sessionId) });
 });
 
 module.exports = router;

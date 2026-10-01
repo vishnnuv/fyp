@@ -1,6 +1,11 @@
 import TrainCard from './TrainCard';
 import ConfirmCard from './ConfirmCard';
 import BookingList from './BookingList';
+import FoodBookings from './FoodBookings';
+import FoodStops from './FoodStops';
+import FoodMenu from './FoodMenu';
+import FoodSummary from './FoodSummary';
+import FoodConfirmed from './FoodConfirmed';
 
 // Simple markdown-like text renderer
 function BotText({ text }) {
@@ -85,6 +90,32 @@ export default function MessageBubble({ message, onSelectTrain }) {
 
             {message.type === 'booking_list' && message.bookings && (
               <BookingList bookings={message.bookings} />
+            )}
+
+            {/* Food ordering flow */}
+            {message.type === 'food_bookings' && message.bookings && (
+              <FoodBookings bookings={message.bookings} actions={message.actions} />
+            )}
+
+            {message.type === 'food_stops' && message.stops && (
+              <FoodStops booking={message.booking} stops={message.stops} actions={message.actions} />
+            )}
+
+            {message.type === 'food_menu' && message.menu && (
+              <FoodMenu
+                menu={message.menu}
+                stop={message.stop}
+                selectedKeys={message.selectedKeys}
+                actions={message.actions}
+              />
+            )}
+
+            {message.type === 'food_summary' && message.summary && (
+              <FoodSummary summary={message.summary} actions={message.actions} />
+            )}
+
+            {message.type === 'food_confirmed' && message.order && (
+              <FoodConfirmed order={message.order} />
             )}
           </div>
           <span className="message-time">
